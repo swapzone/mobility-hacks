@@ -1,15 +1,20 @@
 'use strict';
 
-let express = require('express'),
-  	http 		= require('http'),
-		request = require('request');
+let bodyParser 	= require('body-parser'),
+		crypto			= require('crypto'),
+		express 		= require('express'),
+  	http 				= require('http'),
+		request 		= require('request');
 
 let app = express();
 
+// remove those ENV variables fpr production use
+const APP_SECRET = 'a0432755f42622958c8d39c527f414cb';
 const VALIDATION_TOKEN = 'VerySecretToken';
 const PAGE_ACCESS_TOKEN = 'EAAFHQzIGgSQBAE3HZBnefHh9aIEIXCEXZC9c7ammx3ZArWmbgmEDKDcKNoVjZCRio2apgieMGUP79pSOkqIkCPxoOhtaI8N9mogrQ9ZARqNw6eZAEjH894ZBK7L0vuIZBt5ZA0W5kF8PMaD1dtZAB6bNxBgoh7vfaFkCDhvX5Eo3lPFAZDZD';
 
 app.set('port', process.env.PORT || 8000);
+app.use(bodyParser.json({ verify: verifyRequestSignature }));
 app.use(express.static('public'));
 
 app.get('*', function(req, res, next) {
@@ -43,9 +48,6 @@ app.post('/webhook', function (req, res) {
 		return res.send(200);
 	}
 
-	console.log('Post body:');
-	console.log(data);
-
 	// is it a page subscription?
 	if (data.object == 'page') {
 		// there might be multiple entries if batched by Facebook
@@ -62,7 +64,7 @@ app.post('/webhook', function (req, res) {
 					console.log('Received authentication event.');
 				} else if (messagingEvent.message) {
 					console.log('Received message event.');
-					sendMessage('Hello World!');
+					sendMessage(messagingEvent.sender, 'Hello World!');
 				} else if (messagingEvent.delivery) {
 					console.log('Received message delivery event.');
 				} else if (messagingEvent.postback) {
@@ -86,17 +88,21 @@ app.post('/webhook', function (req, res) {
 /**
  * Call the Send API. If it is successful, we'll get the message id in a response.
  *
- * @param messageData
+ * @param sender
+ * @param message
  */
-function sendMessage(messageData) {
+function sendMessage(sender, message) {
 	request({
-		uri: 'https://graph.facebook.com/v2.8/me/messages',
+		uri: 'https://graph.facebook.com/v2.6/me/messages',
 		qs: { access_token: PAGE_ACCESS_TOKEN },
 		method: 'POST',
-		json: messageData
+		json: {
+			recipient: sender,
+			message: { text:  message }
+		}
 
 	}, function (error, response, body) {
-		if (!error && response.statusCode == 200) {
+		if (!error && response.statusCode === 200) {
 			let recipientId = body.recipient_id;
 			let messageId = body.message_id;
 
@@ -108,9 +114,37 @@ function sendMessage(messageData) {
 					recipientId);
 			}
 		} else {
-			console.error('Unable to send message. :' + response.error);
+			console.error('Unable to send message: ' + response.error);
+			console.error(error);
 		}
 	});
+}
+
+/*
+ * Verify that the callback came from Facebook. Using the App Secret from
+ * the App Dashboard, we can verify the signature that is sent with each
+ * callback in the x-hub-signature field, located in the header.
+ *
+ * https://developers.facebook.com/docs/graph-api/webhooks#setup
+ */
+function verifyRequestSignature(req, res, buf) {
+	let signature = req.headers["x-hub-signature"];
+
+	if (!signature) {
+		// For testing, let's log an error. In production, you should throw an error.
+		console.error("Couldn't validate the signature with app secret:" + APP_SECRET);
+	} else {
+		let elements = signature.split('=');
+		let signatureHash = elements[1];
+
+		let expectedHash = crypto.createHmac('sha1', APP_SECRET)
+			.update(buf)
+			.digest('hex');
+
+		if (signatureHash != expectedHash) {
+			throw new Error("Couldn't validate the request signature: " + APP_SECRET);
+		}
+	}
 }
 
 // start server
