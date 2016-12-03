@@ -275,23 +275,21 @@ const actions = {
 				payload: {
 					template_type: "generic",
 					elements: [{
-						title: "rift",
-						subtitle: "Next-generation virtual reality",
-						item_url: "https://www.oculus.com/en-us/rift/",
-						image_url: "http://messengerdemo.parseapp.com/img/rift.png",
+						title: "Tram 8",
+						subtitle: "Duration 10 min<br />Price 2,70$",
+						image_url: "https://bvg-bot.herokuapp.com/images/rail.png",
 						buttons: [{
 							type: "postback",
-							title: "Select this ride",
+							title: "Pick Route",
 							payload: "RIDE_0",
 						}],
 					}, {
-						title: "touch",
-						subtitle: "Your Hands, Now in VR",
-						item_url: "https://www.oculus.com/en-us/touch/",
-						image_url: "http://messengerdemo.parseapp.com/img/touch.png",
+						title: "Tram M10 + Bus 145",
+						subtitle: "Duration 15 min<br />Price 2,70$",
+						image_url: "https://bvg-bot.herokuapp.com/images/rail_bus.png",
 						buttons: [{
 							type: "postback",
-							title: "Select this ride",
+							title: "Pick Route",
 							payload: "RIDE_1",
 						}]
 					}]
