@@ -248,12 +248,6 @@ const actions = {
 			return Promise.resolve()
 		}
 	},
-	storeLocation(request) {
-		console.log('Retrieved location:');
-		console.log(JSON.stringify(request));
-
-		return Promise.resolve();
-	},
 	requestEventName(request) {
 		console.log('Asking for event name:');
 
@@ -265,9 +259,68 @@ const actions = {
 		return Promise.resolve({
 			eventName: 'Awesome Event'
 		});
+	},
+	requestRouteOptions(request) {
+		console.log('Request route options:');
+		console.log(request);
+
+		let recipientId = sessions[request.sessionId].fbid;
+
+		let messageOptions = {
+			attachment: {
+				type: "template",
+				payload: {
+					template_type: "generic",
+					elements: [{
+						title: "rift",
+						subtitle: "Next-generation virtual reality",
+						item_url: "https://www.oculus.com/en-us/rift/",
+						image_url: "http://messengerdemo.parseapp.com/img/rift.png",
+						buttons: [{
+							type: "web_url",
+							url: "https://www.oculus.com/en-us/rift/",
+							title: "Open Web URL"
+						}, {
+							type: "postback",
+							title: "Call Postback",
+							payload: "Payload for first bubble",
+						}],
+					}, {
+						title: "touch",
+						subtitle: "Your Hands, Now in VR",
+						item_url: "https://www.oculus.com/en-us/touch/",
+						image_url: "http://messengerdemo.parseapp.com/img/touch.png",
+						buttons: [{
+							type: "web_url",
+							url: "https://www.oculus.com/en-us/touch/",
+							title: "Open Web URL"
+						}, {
+							type: "postback",
+							title: "Call Postback",
+							payload: "Payload for second bubble",
+						}]
+					}]
+				}
+			}
+		};
+
+		return new Promise((resolve, reject) => {
+			sendMessage({ id: recipientId }, messageOptions)
+				.then(() => {
+					resolve({
+						numberOfOptions: 2
+					});
+				})
+				.catch(err => {
+					console.error(
+						'Oops! An error occurred while forwarding the response to ',
+						recipientId, ':',
+						err ? err.stack : 'Unknown error'
+					);
+					reject();
+				});
+		});
 	}
-	// You should implement your custom actions here
-	// See https://wit.ai/docs/quickstart
 };
 
 // Setting up our bot
