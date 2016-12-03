@@ -124,6 +124,21 @@ app.post('/webhook', function (req, res) {
 					console.log('Received message delivery event.');
 				} else if (messagingEvent.postback) {
 					console.log('Received message postback event.');
+
+					const exampleResponse = {
+						recipient: {
+							id: '1257227024300314'
+						},
+						timestamp: 1480803170728,
+						sender: { id: '1244506648943221' },
+						postback: {
+							payload: 'RIDE_0'
+						}
+					};
+
+					sendMessage(messagingEvent.sender, {
+						text: 'That is your wonderful natural language processed text: JUST GO THERE!'
+					})
 				} else if (messagingEvent.read) {
 					console.log('Received message read event.');
 				} else {
@@ -276,7 +291,7 @@ const actions = {
 					template_type: "generic",
 					elements: [{
 						title: "Tram 8",
-						subtitle: "Duration 10 min<br />Price 2,70$",
+						subtitle: "Departure 16:13 - Duration 10 min - Price 2,70$",
 						image_url: "https://bvg-bot.herokuapp.com/images/rail.png",
 						buttons: [{
 							type: "postback",
@@ -285,7 +300,7 @@ const actions = {
 						}],
 					}, {
 						title: "Tram M10 + Bus 145",
-						subtitle: "Duration 15 min<br />Price 2,70$",
+						subtitle: "Departure 16:25 - Duration 15 min - Price 2,70$",
 						image_url: "https://bvg-bot.herokuapp.com/images/rail_bus.png",
 						buttons: [{
 							type: "postback",
