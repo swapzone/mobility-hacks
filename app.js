@@ -90,10 +90,9 @@ app.post('/webhook', function (req, res) {
 					if (attachments && attachments[0] && attachments[0].type === 'location') {
 						console.log('Storing location data: ' + JSON.stringify(attachments[0].payload.coordinates));
 						sessions[sessionId].location = attachments[0].payload.coordinates;
+					}
 
-						sendMessage({ id: sender }, 'Cool, thanks for giving me your location.')
-							.catch(console.error);
-					} else if (text) {
+					if (text) {
 						// forward the message to the Wit.ai Bot Engine
 						// this will run all actions until our bot has nothing left to do
 						wit.runActions(
@@ -114,10 +113,9 @@ app.post('/webhook', function (req, res) {
 
 							// Updating the user's current session state
 							sessions[sessionId].context = context;
+						}).catch((err) => {
+							console.error('Oops! Got an error from Wit: ', err.stack || err);
 						})
-							.catch((err) => {
-								console.error('Oops! Got an error from Wit: ', err.stack || err);
-							})
 					}
 				}	else if (messagingEvent.optin) {
 					console.log('Received authentication event.');
