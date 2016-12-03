@@ -8,7 +8,15 @@ let bodyParser 	= require('body-parser'),
 
 let app = express();
 
-// remove those ENV variables fpr production use
+let Wit = require('node-wit').Wit;
+let log = require('node-wit').log;
+
+const WIT_TOKEN = process.env.WIT_TOKEN;
+if (!WIT_TOKEN) {
+	console.error('NO Wit token available.');
+}
+
+// remove those ENV variables for production use
 const APP_SECRET = 'a0432755f42622958c8d39c527f414cb';
 const VALIDATION_TOKEN = 'VerySecretToken';
 const PAGE_ACCESS_TOKEN = 'EAAFHQzIGgSQBAE3HZBnefHh9aIEIXCEXZC9c7ammx3ZArWmbgmEDKDcKNoVjZCRio2apgieMGUP79pSOkqIkCPxoOhtaI8N9mogrQ9ZARqNw6eZAEjH894ZBK7L0vuIZBt5ZA0W5kF8PMaD1dtZAB6bNxBgoh7vfaFkCDhvX5Eo3lPFAZDZD';
@@ -60,11 +68,58 @@ app.post('/webhook', function (req, res) {
 
 			// iterate over each messaging event
 			pageEntry.messaging.forEach(messagingEvent => {
-				if (messagingEvent.optin) {
-					console.log('Received authentication event.');
-				} else if (messagingEvent.message) {
+
+				if (messagingEvent.message && !messagingEvent.message.is_echo) {
 					console.log('Received message event.');
-					sendMessage(messagingEvent.sender, 'Hello World!');
+
+					// DEBUGGING MESSAGE
+					// sendMessage(messagingEvent.sender, 'Hello World!');
+
+					// We retrieve the Facebook user ID of the sender
+					const sender = messagingEvent.sender.id;
+
+					// retrieve the user's current session, or create one if it doesn't exist
+					// this is needed for our bot to figure out the conversation history
+					const sessionId = findOrCreateSession(sender);
+
+					const text =  messagingEvent.message.text;
+					const attachments = messagingEvent.message.attachments;
+
+					if (attachments) {
+						// We received an attachment
+						// Let's reply with an automatic message
+						sendMessage({id: sender}, 'Sorry I can only process text messages for now.')
+							.catch(console.error);
+					} else if (text) {
+						// We received a text message
+
+						// forward the message to the Wit.ai Bot Engine
+						// this will run all actions until our bot has nothing left to do
+						wit.runActions(
+							sessionId, // the user's current session
+							text, // the user's message
+							sessions[sessionId].context // the user's current session state
+						).then((context) => {
+							// Our bot did everything it has to do.
+							// Now it's waiting for further messages to proceed.
+							console.log('Waiting for next user messages');
+
+							// Based on the session state, you might want to reset the session.
+							// This depends heavily on the business logic of your bot.
+							// Example:
+							// if (context['done']) {
+							//   delete sessions[sessionId];
+							// }
+
+							// Updating the user's current session state
+							sessions[sessionId].context = context;
+						})
+							.catch((err) => {
+								console.error('Oops! Got an error from Wit: ', err.stack || err);
+							})
+					}
+				}	else if (messagingEvent.optin) {
+					console.log('Received authentication event.');
 				} else if (messagingEvent.delivery) {
 					console.log('Received message delivery event.');
 				} else if (messagingEvent.postback) {
@@ -92,33 +147,97 @@ app.post('/webhook', function (req, res) {
  * @param message
  */
 function sendMessage(sender, message) {
-	request({
-		uri: 'https://graph.facebook.com/v2.6/me/messages',
-		qs: { access_token: PAGE_ACCESS_TOKEN },
-		method: 'POST',
-		json: {
-			recipient: sender,
-			message: { text:  message }
-		}
-
-	}, function (error, response, body) {
-		if (!error && response.statusCode === 200) {
-			let recipientId = body.recipient_id;
-			let messageId = body.message_id;
-
-			if (messageId) {
-				console.log('Successfully sent message with id %s to recipient %s',
-					messageId, recipientId);
-			} else {
-				console.log('Successfully called send message API for recipient %s',
-					recipientId);
+	return new Promise((resolve, reject) => {
+		request({
+			uri: 'https://graph.facebook.com/v2.6/me/messages',
+			qs: { access_token: PAGE_ACCESS_TOKEN },
+			method: 'POST',
+			json: {
+				recipient: sender,
+				message: { text:  message }
 			}
-		} else {
-			console.error('Unable to send message: ' + response.error);
-			console.error(error);
-		}
+		}, function (error, response, body) {
+			if (!error && response.statusCode === 200) {
+				let recipientId = body.recipient_id;
+				let messageId = body.message_id;
+
+				if (messageId) {
+					console.log('Successfully sent message with id %s to recipient %s',
+						messageId, recipientId);
+				} else {
+					console.log('Successfully called send message API for recipient %s',
+						recipientId);
+				}
+
+				resolve();
+			} else {
+				console.error('Unable to send message: ' + response.error);
+				console.error(error);
+
+				reject();
+			}
+		});
 	});
 }
+
+// ----------------------------------------------------------------------------
+// Wit.ai bot specific code
+
+// This will contain all user sessions.
+// Each session has an entry:
+// sessionId -> {fbid: facebookUserId, context: sessionState}
+const sessions = {};
+
+const findOrCreateSession = (fbid) => {
+	let sessionId;
+	// Let's see if we already have a session for the user fbid
+	Object.keys(sessions).forEach(k => {
+		if (sessions[k].fbid === fbid) {
+			// Yep, got it!
+			sessionId = k;
+		}
+	});
+	if (!sessionId) {
+		// No session found for user fbid, let's create a new one
+		sessionId = new Date().toISOString();
+		sessions[sessionId] = {fbid: fbid, context: {}};
+	}
+	return sessionId;
+};
+
+// Our bot actions
+const actions = {
+	send(request, response) {
+		const recipientId = sessions[request.sessionId].fbid;
+		console.log('Calling send action for recipient id: ' + recipientId);
+
+		if (recipientId) {
+			// forward our bot response to Facebook and return a promise to let
+			// our bot know when we're done sending
+			return sendMessage({ id: recipientId }, response.text)
+				.then(() => null)
+				.catch(err => {
+					console.error(
+						'Oops! An error occurred while forwarding the response to ',
+						recipientId, ':',
+						err ? err.stack : 'Unknown error'
+					);
+				});
+		} else {
+			console.error('Oops! Couldn\'t find user for session:', request.sessionId);
+			return Promise.resolve()
+		}
+	},
+	// You should implement your custom actions here
+	// See https://wit.ai/docs/quickstart
+};
+
+// Setting up our bot
+const wit = new Wit({
+	accessToken: WIT_TOKEN,
+	actions,
+	logger: new log.Logger(log.INFO)
+});
 
 /*
  * Verify that the callback came from Facebook. Using the App Secret from
