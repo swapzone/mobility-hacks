@@ -85,14 +85,15 @@ app.post('/webhook', function (req, res) {
 					const text =  messagingEvent.message.text;
 					const attachments = messagingEvent.message.attachments;
 
-					if (attachments) {
-						// We received an attachment
-						// Let's reply with an automatic message
-						sendMessage({id: sender}, 'Sorry I can only process text messages for now.')
+					//console.log(JSON.stringify(attachments));
+
+					if (attachments && attachments[0] && attachments[0].type === 'location') {
+						console.log('Storing location data: ' + JSON.stringify(attachments[0].payload.coordinates));
+						sessions[sessionId].location = attachments[0].payload.coordinates;
+
+						sendMessage({ id: sender }, 'Cool, thanks for giving me your location.')
 							.catch(console.error);
 					} else if (text) {
-						// We received a text message
-
 						// forward the message to the Wit.ai Bot Engine
 						// this will run all actions until our bot has nothing left to do
 						wit.runActions(
@@ -228,6 +229,10 @@ const actions = {
 			return Promise.resolve()
 		}
 	},
+	storeLocation(data) {
+		console.log('Retrieved location:');
+		console.log(JSON.stringify(data.entities.location));
+	}
 	// You should implement your custom actions here
 	// See https://wit.ai/docs/quickstart
 };
