@@ -73,7 +73,7 @@ app.post('/webhook', function (req, res) {
 					console.log('Received message event.');
 
 					// DEBUGGING MESSAGE
-					// sendMessage(messagingEvent.sender, 'Hello World!');
+					// sendMessage(messagingEvent.sender, { text: 'Hello World!' });
 
 					// We retrieve the Facebook user ID of the sender
 					const sender = messagingEvent.sender.id;
@@ -141,8 +141,8 @@ app.post('/webhook', function (req, res) {
 /**
  * Call the Send API. If it is successful, we'll get the message id in a response.
  *
- * @param sender
- * @param message
+ * @param sender user object
+ * @param message message object
  */
 function sendMessage(sender, message) {
 	return new Promise((resolve, reject) => {
@@ -152,7 +152,7 @@ function sendMessage(sender, message) {
 			method: 'POST',
 			json: {
 				recipient: sender,
-				message: { text:  message }
+				message: message
 			}
 		}, function (error, response, body) {
 			if (!error && response.statusCode === 200) {
@@ -215,10 +215,26 @@ const actions = {
 		const recipientId = sessions[request.sessionId].fbid;
 		console.log('Calling send action for recipient id: ' + recipientId);
 
+		let messageObject;
+		if (response.quickreplies) {
+			messageObject = {
+				text: response.text,
+				quick_replies: response.quickreplies.map(reply => {
+					return {
+						content_type: "text",
+						title: reply,
+						payload: reply
+					};
+				})
+			}
+		} else {
+			messageObject = { text:  response.text };
+		}
+
 		if (recipientId) {
 			// forward our bot response to Facebook and return a promise to let
 			// our bot know when we're done sending
-			return sendMessage({ id: recipientId }, response.text)
+			return sendMessage({ id: recipientId }, messageObject)
 				.then(() => null)
 				.catch(err => {
 					console.error(
