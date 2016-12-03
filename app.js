@@ -11,6 +11,8 @@ let app = express();
 let Wit = require('node-wit').Wit;
 let log = require('node-wit').log;
 
+let Facebook = require('./app/facebook');
+
 const WIT_TOKEN = process.env.WIT_TOKEN;
 if (!WIT_TOKEN) {
 	console.error('NO Wit token available.');
@@ -251,14 +253,15 @@ const actions = {
 	requestEventName(request) {
 		console.log('Asking for event name:');
 
-		// TODO ask for event name with Facebook API
-
 		console.log('request');
 		console.log(JSON.stringify(request));
 
-		return Promise.resolve({
-			eventName: 'Awesome Event'
-		});
+		return Facebook.getNextEvent()
+			.then(event => {
+				return {
+					eventName: '\'' + event.name + '\''
+				};
+			});
 	},
 	requestRouteOptions(request) {
 		console.log('Request route options:');
@@ -277,13 +280,9 @@ const actions = {
 						item_url: "https://www.oculus.com/en-us/rift/",
 						image_url: "http://messengerdemo.parseapp.com/img/rift.png",
 						buttons: [{
-							type: "web_url",
-							url: "https://www.oculus.com/en-us/rift/",
-							title: "Open Web URL"
-						}, {
 							type: "postback",
-							title: "Call Postback",
-							payload: "Payload for first bubble",
+							title: "Select this ride",
+							payload: "RIDE_0",
 						}],
 					}, {
 						title: "touch",
@@ -291,13 +290,9 @@ const actions = {
 						item_url: "https://www.oculus.com/en-us/touch/",
 						image_url: "http://messengerdemo.parseapp.com/img/touch.png",
 						buttons: [{
-							type: "web_url",
-							url: "https://www.oculus.com/en-us/touch/",
-							title: "Open Web URL"
-						}, {
 							type: "postback",
-							title: "Call Postback",
-							payload: "Payload for second bubble",
+							title: "Select this ride",
+							payload: "RIDE_1",
 						}]
 					}]
 				}
