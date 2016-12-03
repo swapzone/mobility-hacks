@@ -1,0 +1,26 @@
+{
+  "name": "mobility-hacks",
+  "version": "0.0.1",
+  "description": "The mobility hacks 2016 BVG bot project.",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/swapzone/mobility-hacks"
+  },
+  "author": "Mobility Hacks 2016",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.15.2",
+    "lodash": "^4.17.2",
+    "config": "^1.24.0",
+    "express": "^4.14.0",
+    "request": "^2.79.0"
+  },
+  "engines": {
+    "node": "~4.1.2"
+  }
+}
