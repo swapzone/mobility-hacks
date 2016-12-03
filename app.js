@@ -82,13 +82,14 @@ app.post('/webhook', function (req, res) {
 					// this is needed for our bot to figure out the conversation history
 					const sessionId = findOrCreateSession(sender);
 
-					const text =  messagingEvent.message.text;
-					const attachments = messagingEvent.message.attachments;
+					let text =  messagingEvent.message.text;
+					let attachments = messagingEvent.message.attachments;
 
 					//console.log(JSON.stringify(attachments));
 
 					if (attachments && attachments[0] && attachments[0].type === 'location') {
 						console.log('Storing location data: ' + JSON.stringify(attachments[0].payload.coordinates));
+						text = "USER_PROVIDED_LOCATION";
 						sessions[sessionId].location = attachments[0].payload.coordinates;
 					}
 
@@ -96,7 +97,7 @@ app.post('/webhook', function (req, res) {
 					// this will run all actions until our bot has nothing left to do
 					wit.runActions(
 						sessionId, // the user's current session
-						text ? text : "USER_PROVIDED_LOCATION", // the user's message
+						text,
 						sessions[sessionId].context // the user's current session state
 					).then((context) => {
 						// Our bot did everything it has to do.
@@ -205,6 +206,12 @@ const findOrCreateSession = (fbid) => {
 // Our bot actions
 const actions = {
 	send(request, response) {
+		console.log('Request:');
+		console.log(JSON.stringify(request));
+
+		console.log('Response:');
+		console.log(JSON.stringify(response));
+
 		const recipientId = sessions[request.sessionId].fbid;
 		console.log('Calling send action for recipient id: ' + recipientId);
 
@@ -225,9 +232,23 @@ const actions = {
 			return Promise.resolve()
 		}
 	},
-	storeLocation(data) {
+	storeLocation(request) {
 		console.log('Retrieved location:');
-		console.log(JSON.stringify(data.entities.location));
+		console.log(JSON.stringify(request));
+
+		return Promise.resolve();
+	},
+	requestEventName(request) {
+		console.log('Asking for event name:');
+
+		// TODO ask for event name with Facebook API
+
+		console.log('request');
+		console.log(JSON.stringify(request));
+
+		return Promise.resolve({
+			eventName: 'Awesome Event'
+		});
 	}
 	// You should implement your custom actions here
 	// See https://wit.ai/docs/quickstart
