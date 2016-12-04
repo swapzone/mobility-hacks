@@ -132,7 +132,6 @@ app.post('/webhook', function (req, res) {
 
 					console.log(messagingEvent.sender);
 					console.log(BVG.getTripInstructions(tripData));
-					console.log('Did it!');
 
 					sendMessage(messagingEvent.sender, {
 						text: 'Whatever...' // BVG.getTripInstructions(tripData)
