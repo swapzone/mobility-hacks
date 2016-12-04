@@ -99,12 +99,10 @@ app.post('/webhook', function (req, res) {
 					// forward the message to the Wit.ai Bot Engine
 					// this will run all actions until our bot has nothing left to do
 					wit.runActions(
-						sessionId, // the user's current session
+						sessionId,
 						text,
-						sessions[sessionId].context // the user's current session state
+						sessions[sessionId].context
 					).then((context) => {
-						// Our bot did everything it has to do.
-						// Now it's waiting for further messages to proceed.
 						console.log('Waiting for next user messages');
 
 						// Based on the session state, you might want to reset the session.
@@ -114,7 +112,7 @@ app.post('/webhook', function (req, res) {
 						//   delete sessions[sessionId];
 						// }
 
-						// Updating the user's current session state
+						// updating the user's current session state
 						sessions[sessionId].context = context;
 					}).catch((err) => {
 						console.error('Oops! Got an error from Wit: ', err.stack || err);
@@ -125,20 +123,10 @@ app.post('/webhook', function (req, res) {
 					console.log('Received message delivery event.');
 				} else if (messagingEvent.postback) {
 					console.log('Received message postback event.');
-
-					const exampleResponse = {
-						recipient: {
-							id: '1257227024300314'
-						},
-						timestamp: 1480803170728,
-						sender: { id: '1244506648943221' },
-						postback: {
-							payload: 'RIDE_0'
-						}
-					};
+					const tripData = JSON.parse(messagingEvent.postback.payload);
 
 					sendMessage(messagingEvent.sender, {
-						text: 'That is your wonderful natural language processed text: JUST GO THERE!'
+						text: BVG.getTripInstructions(tripData)
 					})
 				} else if (messagingEvent.read) {
 					console.log('Received message read event.');
@@ -209,14 +197,13 @@ const findOrCreateSession = (fbid) => {
 	// Let's see if we already have a session for the user fbid
 	Object.keys(sessions).forEach(k => {
 		if (sessions[k].fbid === fbid) {
-			// Yep, got it!
 			sessionId = k;
 		}
 	});
 	if (!sessionId) {
 		// No session found for user fbid, let's create a new one
 		sessionId = new Date().toISOString();
-		sessions[sessionId] = {fbid: fbid, context: {}};
+		sessions[sessionId] = { fbid: fbid, context: {} };
 	}
 	return sessionId;
 };
@@ -287,6 +274,9 @@ const actions = {
 
 		return new Promise((resolve, reject) => {
 
+			// TODO use real location and event time data
+			// sessions[sessionId].context
+
 			const origin = { lat: 52.52191, lng: 13.413215 };
 			const destination = { lat: 52.498997, lng: 13.418334 };
 			const targetDateTime = '';
@@ -299,38 +289,17 @@ const actions = {
 					payload: {
 						template_type: "generic",
 						elements: bvgResponse.map((trip, index) => {
-
 							return {
-								title: "Tram 8",
-								subtitle: "Departure 16:13 - Duration 10 min - Price 2,70$",
-								image_url: "https://bvg-bot.herokuapp.com/images/rail.png",
+								title: BVG.getTripTitle(trip),
+								subtitle: BVG.getTripDescription(trip),
+								image_url: BVG.getTripImage(trip),
 								buttons: [{
 									type: "postback",
 									title: "Pick Route" + (index + 1),
-									payload: "RIDE_" + (index + 1),
+									payload: JSON.stringify(bvgResponse)
 								}],
 							};
 						})
-
-						// [{
-						// 	title: "Tram 8",
-						// 	subtitle: "Departure 16:13 - Duration 10 min - Price 2,70$",
-						// 	image_url: "https://bvg-bot.herokuapp.com/images/rail.png",
-						// 	buttons: [{
-						// 		type: "postback",
-						// 		title: "Pick Route",
-						// 		payload: "RIDE_0",
-						// 	}],
-						// }, {
-						// 	title: "Tram M10 + Bus 145",
-						// 	subtitle: "Departure 16:25 - Duration 15 min - Price 2,70$",
-						// 	image_url: "https://bvg-bot.herokuapp.com/images/rail_bus.png",
-						// 	buttons: [{
-						// 		type: "postback",
-						// 		title: "Pick Route",
-						// 		payload: "RIDE_1",
-						// 	}]
-						// }]
 					}
 				}
 			};

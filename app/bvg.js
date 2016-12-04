@@ -115,11 +115,30 @@ let getTripDescription = trip => {
 	return 'Departure Time: ' + departureTime + ' -- Trip Duration: ' + tripDuration + ' minutes';
 };
 
-// getRoutes({ lat: 52.52191, lng: 13.413215 }, { lat: 52.498997, lng: 13.418334 }, '')
-// 	.then(results => {
-// 		// console.log(JSON.stringify(results, null, 2));
-// 		console.log(getTripDescription(results[0]));
-// 	});
+/**
+ * Compose the natural language version of the trip instructions.
+ *
+ * @param trip
+ * @returns {string}
+ */
+let getTripInstructions = trip => {
+	if (trip.length === 1) {
+		return capitalize(trip[0].direction) + ' ' + trip[0].destinationName;
+	}
+	let instructions = 'First ' + trip[0].direction + ' ' + trip[0].destinationName;
+
+	for (let i = 1; i<trip.length; i++) {
+		if (i > 1 && i === trip.length - 1) {
+			instructions += '. Finally ' + trip[i].direction +  ' ' + trip[i].destinationName + '.';
+		} else if (i === 1 && i === trip.length - 1) {
+			instructions += ', then ' + trip[i].direction +  ' ' + trip[i].destinationName + '.';
+		} else {
+			instructions += ', then ' + trip[i].direction +  ' ' + trip[i].destinationName;
+		}
+	}
+
+	return instructions;
+};
 
 //
 // Module API
@@ -128,5 +147,13 @@ module.exports = {
 	getRoutes: getRoutes,
 	getTripDescription: getTripDescription,
 	getTripImage: getTripImage,
+	getTripInstructions: getTripInstructions,
 	getTripTitle: getTripTitle
 };
+
+// DEBUGGING CODE
+// getRoutes({ lat: 52.52191, lng: 13.413215 }, { lat: 52.498997, lng: 13.418334 }, '')
+// 	.then(results => {
+// 		// console.log(JSON.stringify(results, null, 2));
+// 		console.log(getTripInstructions(results[0]));
+// 	});
