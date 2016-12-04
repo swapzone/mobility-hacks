@@ -12,6 +12,7 @@ let Wit = require('node-wit').Wit;
 let log = require('node-wit').log;
 
 let Facebook = require('./app/facebook');
+let BVG = require('./app/bvg');
 
 const WIT_TOKEN = process.env.WIT_TOKEN;
 if (!WIT_TOKEN) {
@@ -284,35 +285,56 @@ const actions = {
 
 		let recipientId = sessions[request.sessionId].fbid;
 
-		let messageOptions = {
-			attachment: {
-				type: "template",
-				payload: {
-					template_type: "generic",
-					elements: [{
-						title: "Tram 8",
-						subtitle: "Departure 16:13 - Duration 10 min - Price 2,70$",
-						image_url: "https://bvg-bot.herokuapp.com/images/rail.png",
-						buttons: [{
-							type: "postback",
-							title: "Pick Route",
-							payload: "RIDE_0",
-						}],
-					}, {
-						title: "Tram M10 + Bus 145",
-						subtitle: "Departure 16:25 - Duration 15 min - Price 2,70$",
-						image_url: "https://bvg-bot.herokuapp.com/images/rail_bus.png",
-						buttons: [{
-							type: "postback",
-							title: "Pick Route",
-							payload: "RIDE_1",
-						}]
-					}]
-				}
-			}
-		};
-
 		return new Promise((resolve, reject) => {
+
+			const origin = { lat: 52.52191, lng: 13.413215 };
+			const destination = { lat: 52.498997, lng: 13.418334 };
+			const targetDateTime = '';
+
+			const bvgResponse = BVG.getRoutes(origin, destination, targetDateTime);
+
+			let messageOptions = {
+				attachment: {
+					type: "template",
+					payload: {
+						template_type: "generic",
+						elements: bvgResponse.map((trip, index) => {
+
+							return {
+								title: "Tram 8",
+								subtitle: "Departure 16:13 - Duration 10 min - Price 2,70$",
+								image_url: "https://bvg-bot.herokuapp.com/images/rail.png",
+								buttons: [{
+									type: "postback",
+									title: "Pick Route" + (index + 1),
+									payload: "RIDE_" + (index + 1),
+								}],
+							};
+						})
+
+						// [{
+						// 	title: "Tram 8",
+						// 	subtitle: "Departure 16:13 - Duration 10 min - Price 2,70$",
+						// 	image_url: "https://bvg-bot.herokuapp.com/images/rail.png",
+						// 	buttons: [{
+						// 		type: "postback",
+						// 		title: "Pick Route",
+						// 		payload: "RIDE_0",
+						// 	}],
+						// }, {
+						// 	title: "Tram M10 + Bus 145",
+						// 	subtitle: "Departure 16:25 - Duration 15 min - Price 2,70$",
+						// 	image_url: "https://bvg-bot.herokuapp.com/images/rail_bus.png",
+						// 	buttons: [{
+						// 		type: "postback",
+						// 		title: "Pick Route",
+						// 		payload: "RIDE_1",
+						// 	}]
+						// }]
+					}
+				}
+			};
+
 			sendMessage({ id: recipientId }, messageOptions)
 				.then(() => {
 					resolve({

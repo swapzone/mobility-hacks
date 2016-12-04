@@ -3,7 +3,7 @@
 let request = require('request');
 
 /**
- *
+ * Get the upcoming event from Facebook.
  *
  * @returns {Promise}
  */
@@ -12,8 +12,8 @@ let getNextEvent = () => {
 		resolve({
 			name: 'No Pants Subway Ride Berlin 2017',
 			location: {
-				latitude: 0,
-				longitude: 0
+				latitude: 52.498997,
+				longitude: 13.418334
 			},
 			datetime: '2017-01-08T13:00:00'
 		});
@@ -41,6 +41,9 @@ let getNextEvent = () => {
 	});
 };
 
+//
+// Module API
+//
 module.exports = {
 	getNextEvent: getNextEvent
 };
