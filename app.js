@@ -145,10 +145,22 @@ app.post('/webhook', function (req, res) {
 							console.log(result);
 
 							setTimeout(() => {
-								sendMessage(messagingEvent.sender, {
-									text: 'There will be ' + result.condition + ' with ' +
-										result.temperature + ' °C.'
-								});
+								let messageObject = {
+									attachment: {
+										type: "template",
+										payload: {
+											template_type: "generic",
+											elements: [{
+												title: 'Good times ahead',
+												subtitle: 'There will be ' + result.condition + ' with ' +
+												result.temperature + ' °C.',
+												image_url: 'https://bvg-bot.herokuapp.com/images/weather-fog.png'
+											}]
+										}
+									}
+								};
+
+								sendMessage(messagingEvent.sender, messageObject);
 							}, 2500);
 						})
 						.catch(console.error);
