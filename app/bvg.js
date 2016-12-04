@@ -1,7 +1,8 @@
 'use strict';
 
-let request = require('request'),
-		moment 	= require('moment');
+let request 		= require('request'),
+		moment 			= require('moment'),
+		capitalize 	= require('capitalize');
 
 /**
  * Get the routes from the BVG API.
@@ -20,7 +21,7 @@ let getRoutes = (origin, destination, arrivalTime) => {
 			uri: 'http://demo.hafas.de/openapi/vbb-proxy/trip?format=json' +
 			'&originCoordLat=' + origin.lat + '8&originCoordLong=' + origin.lng +
 			'&destCoordLat=' + destination.lat + '&destCoordLong=' + destination.lng +
-			'&accessId=BVG-VBB-Dezember',
+			'&accessId=BVG-VBB-Dezember&date=2017-01-08&time=17:00',
 			method: 'GET'
 		}, function (error, response, body) {
 			if (error) {
@@ -35,13 +36,13 @@ let getRoutes = (origin, destination, arrivalTime) => {
 					let tripSegment = {
 						origin: {
 							lat: legParsedElement['Origin']['lat'],
-							lng: legParsedElement['Origin']['lng']
+							lng: legParsedElement['Origin']['lon']
 						},
 						originName : legParsedElement['Origin']['name'],
 						departureTime : departureTime,
 						destination: {
 							lat: legParsedElement['Destination']['lat'],
-							lng: legParsedElement['Destination']['lng']
+							lng: legParsedElement['Destination']['lon']
 						},
 						destinationName : legParsedElement['Destination']['name'],
 						arrivalTime : arrivalTime,
@@ -54,6 +55,7 @@ let getRoutes = (origin, destination, arrivalTime) => {
 					if (legParsedElement['type'] !== 'WALK') {
 						tripSegment.line = legParsedElement['Product']['line'];
 						tripSegment.vehicleType = legParsedElement['Origin']['type'];
+						tripSegment.isBus = legParsedElement['Product']['catOut'].trim() === 'Bus';
 					}
 
 					return tripSegment;
@@ -90,16 +92,22 @@ let getTripImage = trip => {
 	let publicTransportSegments = trip.filter(segment => {
 		return segment.type !== 'WALK';
 	}).map(segment => {
-		return segment.vehicleType;
+		return segment;
 	});
 
 	if (publicTransportSegments.length === 1) {
-		if (publicTransportSegments[0] === 'ST') {
+		if (!publicTransportSegments[0].isBus) {
 			return 'https://bvg-bot.herokuapp.com/images/rail.png';
 		}
 		return 'https://bvg-bot.herokuapp.com/images/bus.png';
 	}
-	return 'https://bvg-bot.herokuapp.com/images/rail_bus.png';
+
+	console.log(publicTransportSegments);
+	if (publicTransportSegments.filter(segment => !!segment.isBus).length) {
+		return 'https://bvg-bot.herokuapp.com/images/rail_bus.png';
+	} else {
+		return 'https://bvg-bot.herokuapp.com/images/rail.png';
+	}
 };
 
 /**
@@ -119,25 +127,30 @@ let getTripDescription = trip => {
  * Compose the natural language version of the trip instructions.
  *
  * @param trip
- * @returns {string}
+ * @returns {Array}
  */
 let getTripInstructions = trip => {
+
 	if (trip.length === 1) {
-		return capitalize(trip[0].direction) + ' ' + trip[0].destinationName;
+		return [capitalize(trip[0].direction) + ' ' + trip[0].destinationName + '.'];
 	}
-	let instructions = 'First ' + trip[0].direction + ' ' + trip[0].destinationName;
+
+	let tripInstructionsArray = ['First ' + trip[0].direction + ' ' + trip[0].destinationName + '.'];
 
 	for (let i = 1; i<trip.length; i++) {
 		if (i > 1 && i === trip.length - 1) {
-			instructions += '. Finally ' + trip[i].direction +  ' ' + trip[i].destinationName + '.';
+			if (!trip[i].destinationName) {
+				trip[i].destinationName = 'Destination';
+			}
+			tripInstructionsArray.push('Finally ' + trip[i].direction +  ' ' + trip[i].destinationName + '.');
 		} else if (i === 1 && i === trip.length - 1) {
-			instructions += ', then ' + trip[i].direction +  ' ' + trip[i].destinationName + '.';
+			tripInstructionsArray.push('Then ' + trip[i].direction +  ' ' + trip[i].destinationName + '.');
 		} else {
-			instructions += ', then ' + trip[i].direction +  ' ' + trip[i].destinationName;
+			tripInstructionsArray.push(capitalize(trip[i].direction) +  ' ' + trip[i].destinationName + '.');
 		}
 	}
 
-	return instructions;
+	return tripInstructionsArray;
 };
 
 //
@@ -154,6 +167,6 @@ module.exports = {
 // DEBUGGING CODE
 // getRoutes({ lat: 52.52191, lng: 13.413215 }, { lat: 52.498997, lng: 13.418334 }, '')
 // 	.then(results => {
-// 		// console.log(JSON.stringify(results, null, 2));
-// 		console.log(getTripInstructions(results[0]));
+// 		console.log(JSON.stringify(results, null, 2));
+// 		console.log(getTripInstructions(results[1]));
 // 	});

@@ -10,12 +10,12 @@ let request = require('request');
 let getNextEvent = () => {
 	return new Promise((resolve) => {
 		resolve({
-			name: 'No Pants Subway Ride Berlin 2017',
+			name: 'CUBE Tech Fair',
 			location: {
-				latitude: 52.498997,
-				longitude: 13.418334
+				latitude: 52.4992001,
+				longitude: 13.2702861
 			},
-			datetime: '2017-01-08T13:00:00'
+			datetime: '2017-01-08T18:00:00'
 		});
 
 		// request({

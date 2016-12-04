@@ -72,18 +72,18 @@ app.post('/webhook', function (req, res) {
 			// iterate over each messaging event
 			pageEntry.messaging.forEach(messagingEvent => {
 
+				// We retrieve the Facebook user ID of the sender
+				const sender = messagingEvent.sender.id;
+
+				// retrieve the user's current session, or create one if it doesn't exist
+				// this is needed for our bot to figure out the conversation history
+				const sessionId = findOrCreateSession(sender);
+
 				if (messagingEvent.message && !messagingEvent.message.is_echo) {
 					console.log('Received message event.');
 
 					// DEBUGGING MESSAGE
 					// sendMessage(messagingEvent.sender, { text: 'Hello World!' });
-
-					// We retrieve the Facebook user ID of the sender
-					const sender = messagingEvent.sender.id;
-
-					// retrieve the user's current session, or create one if it doesn't exist
-					// this is needed for our bot to figure out the conversation history
-					const sessionId = findOrCreateSession(sender);
 
 					let text =  messagingEvent.message.text;
 					let attachments = messagingEvent.message.attachments;
@@ -123,11 +123,20 @@ app.post('/webhook', function (req, res) {
 					console.log('Received message delivery event.');
 				} else if (messagingEvent.postback) {
 					console.log('Received message postback event.');
-					const tripData = JSON.parse(messagingEvent.postback.payload);
+					const routeIndex = parseInt(messagingEvent.postback.payload.split('_')[1]);
+					console.log('Route index: ' + routeIndex);
 
-					sendMessage(messagingEvent.sender, {
-						text: BVG.getTripInstructions(tripData)
-					})
+					const tripData = sessions[sessionId].routes[routeIndex];
+					let tripInstructions = BVG.getTripInstructions(tripData);
+					console.log(tripInstructions);
+
+					tripInstructions.forEach((instruction, index) => {
+						setTimeout(() => {
+							sendMessage(messagingEvent.sender, {
+								text: instruction
+							});
+						}, 600 * index);
+					});
 				} else if (messagingEvent.read) {
 					console.log('Received message read event.');
 				} else {
@@ -277,46 +286,49 @@ const actions = {
 			// TODO use real location and event time data
 			// sessions[sessionId].context
 
-			const origin = { lat: 52.52191, lng: 13.413215 };
-			const destination = { lat: 52.498997, lng: 13.418334 };
+			const origin = { lat: 52.500142, lng: 13.435504 };
+			const destination = { lat: 52.4992001, lng: 13.2702861 };
 			const targetDateTime = '';
 
-			const bvgResponse = BVG.getRoutes(origin, destination, targetDateTime);
+			BVG.getRoutes(origin, destination, targetDateTime)
+				.then(bvgResponse => {
+					sessions[request.sessionId].routes = bvgResponse;
 
-			let messageOptions = {
-				attachment: {
-					type: "template",
-					payload: {
-						template_type: "generic",
-						elements: bvgResponse.map((trip, index) => {
-							return {
-								title: BVG.getTripTitle(trip),
-								subtitle: BVG.getTripDescription(trip),
-								image_url: BVG.getTripImage(trip),
-								buttons: [{
-									type: "postback",
-									title: "Pick Route" + (index + 1),
-									payload: JSON.stringify(bvgResponse)
-								}],
-							};
+					let messageOptions = {
+						attachment: {
+							type: "template",
+							payload: {
+								template_type: "generic",
+								elements: bvgResponse.map((trip, index) => {
+									return {
+										title: BVG.getTripTitle(trip),
+										subtitle: BVG.getTripDescription(trip),
+										image_url: BVG.getTripImage(trip),
+										buttons: [{
+											type: "postback",
+											title: "Pick Route " + (index + 1),
+											payload: "Route_" + index
+										}],
+									};
+								})
+							}
+						}
+					};
+
+					sendMessage({ id: recipientId }, messageOptions)
+						.then(() => {
+							resolve({
+								numberOfOptions: 2
+							});
 						})
-					}
-				}
-			};
-
-			sendMessage({ id: recipientId }, messageOptions)
-				.then(() => {
-					resolve({
-						numberOfOptions: 2
-					});
-				})
-				.catch(err => {
-					console.error(
-						'Oops! An error occurred while forwarding the response to ',
-						recipientId, ':',
-						err ? err.stack : 'Unknown error'
-					);
-					reject();
+						.catch(err => {
+							console.error(
+								'Oops! An error occurred while forwarding the response to ',
+								recipientId, ':',
+								err ? err.stack : 'Unknown error'
+							);
+							reject();
+						});
 				});
 		});
 	}
