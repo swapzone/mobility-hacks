@@ -35,13 +35,13 @@ let getRoutes = (origin, destination, arrivalTime) => {
 					let tripSegment = {
 						origin: {
 							lat: legParsedElement['Origin']['lat'],
-							lng: legParsedElement['Origin']['lng']
+							lng: legParsedElement['Origin']['lon']
 						},
 						originName : legParsedElement['Origin']['name'],
 						departureTime : departureTime,
 						destination: {
 							lat: legParsedElement['Destination']['lat'],
-							lng: legParsedElement['Destination']['lng']
+							lng: legParsedElement['Destination']['lon']
 						},
 						destinationName : legParsedElement['Destination']['name'],
 						arrivalTime : arrivalTime,
@@ -54,6 +54,7 @@ let getRoutes = (origin, destination, arrivalTime) => {
 					if (legParsedElement['type'] !== 'WALK') {
 						tripSegment.line = legParsedElement['Product']['line'];
 						tripSegment.vehicleType = legParsedElement['Origin']['type'];
+						tripSegment.isBus = legParsedElement['Product']['catOut'].trim() === 'Bus';
 					}
 
 					return tripSegment;
@@ -90,16 +91,22 @@ let getTripImage = trip => {
 	let publicTransportSegments = trip.filter(segment => {
 		return segment.type !== 'WALK';
 	}).map(segment => {
-		return segment.vehicleType;
+		return segment;
 	});
 
 	if (publicTransportSegments.length === 1) {
-		if (publicTransportSegments[0] === 'ST') {
+		if (!publicTransportSegments[0].isBus) {
 			return 'https://bvg-bot.herokuapp.com/images/rail.png';
 		}
 		return 'https://bvg-bot.herokuapp.com/images/bus.png';
 	}
-	return 'https://bvg-bot.herokuapp.com/images/rail_bus.png';
+
+	console.log(publicTransportSegments);
+	if (publicTransportSegments.filter(segment => !!segment.isBus).length) {
+		return 'https://bvg-bot.herokuapp.com/images/rail_bus.png';
+	} else {
+		return 'https://bvg-bot.herokuapp.com/images/rail.png';
+	}
 };
 
 /**
