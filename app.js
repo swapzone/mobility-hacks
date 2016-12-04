@@ -141,9 +141,6 @@ app.post('/webhook', function (req, res) {
 
 					Weather.getWeatherData('Berlin')
 						.then(result => {
-							console.log('Weather data: ');
-							console.log(result);
-
 							setTimeout(() => {
 								let messageObject = {
 									attachment: {
@@ -151,9 +148,9 @@ app.post('/webhook', function (req, res) {
 										payload: {
 											template_type: "generic",
 											elements: [{
-												title: 'Good times ahead',
+												title: 'Wear your long underwear',
 												subtitle: 'There will be ' + result.condition + ' with ' +
-												result.temperature + ' °C.',
+													result.temperature + ' °C.',
 												image_url: 'https://bvg-bot.herokuapp.com/images/weather-fog.png'
 											}]
 										}
@@ -162,6 +159,10 @@ app.post('/webhook', function (req, res) {
 
 								sendMessage(messagingEvent.sender, messageObject);
 							}, 2500);
+
+							setTimeout(() => {
+								sendMessage(messagingEvent.sender, { text: 'Have a great trip!' });
+							}, 3000);
 						})
 						.catch(console.error);
 				} else if (messagingEvent.read) {
