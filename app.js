@@ -13,6 +13,7 @@ let log = require('node-wit').log;
 
 let Facebook = require('./app/facebook');
 let BVG = require('./app/bvg');
+let Weather = require('./app/weather');
 
 const WIT_TOKEN = process.env.WIT_TOKEN;
 if (!WIT_TOKEN) {
@@ -137,6 +138,20 @@ app.post('/webhook', function (req, res) {
 							});
 						}, 600 * index);
 					});
+
+					Weather.getWeatherData('Berlin')
+						.then(result => {
+							console.log('Weather data: ');
+							console.log(result);
+
+							setTimeout(() => {
+								sendMessage(messagingEvent.sender, {
+									text: 'There will be ' + result.condition + ' with ' +
+										result.temperature + ' °C.'
+								});
+							}, 2500);
+						})
+						.catch(console.error);
 				} else if (messagingEvent.read) {
 					console.log('Received message read event.');
 				} else {
